@@ -201,7 +201,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     //backgroundColor: colors.bluetooth,
     padding: 10,
-    borderRadius: 10,
     fontSize: 15,
     fontFamily: 'RobotoCondensed-Regular',
   },
