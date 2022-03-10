@@ -1,17 +1,7 @@
 import React, {useEffect, useState} from 'react';
-import {
-  StyleSheet,
-  Text,
-  FlatList,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { StyleSheet, Text, FlatList, SafeAreaView, TouchableOpacity, ToastAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  BluetoothManager,
-  BluetoothEscposPrinter,
-  BluetoothTscPrinter,
-} from 'react-native-bluetooth-escpos-printer';
+import { BluetoothManager } from 'react-native-bluetooth-escpos-printer';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -46,13 +36,14 @@ export default () => {
   }, []);
 
   const setBluetoothDevice = async (key, value) => {
-    try {
-      await AsyncStorage.setItem(key, value);
+    await AsyncStorage.setItem(key, value);
+    await BluetoothManager.connect(value) // the device address scanned.
+    .then((s)=>{
+      console.log('Conectado à ' + value);
       navigation.pop();
-      console.log(`Dispositivo : ${value}`);
-    } catch (error) {
-      console.log(error.message);
-    }
+    }),(e)=>{
+      console.log('Falhou Conexão')
+    }       
   };
 
   return (
