@@ -3,7 +3,6 @@ import { StyleSheet, Text, FlatList, SafeAreaView, TouchableOpacity, ToastAndroi
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BluetoothManager } from 'react-native-bluetooth-escpos-printer';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
 
 export default () => {
   const [deviceList, setDeviceList] = useState([]);
@@ -16,12 +15,12 @@ export default () => {
     });
 
     BluetoothManager.enableBluetooth().then(
-      (r) => {
+      (devices) => {
         var paired = [];
-        if (r && r.length > 0) {
-          for (var i = 0; i < r.length; i++) {
+        if (devices && devices.length > 0) {
+          for (var i = 0; i < devices.length; i++) {
             try {
-              paired.push(JSON.parse(r[i]));
+              paired.push(JSON.parse(devices[i]));
             } catch (e) {
               console.log(e);
             }
@@ -37,13 +36,26 @@ export default () => {
 
   const setBluetoothDevice = async (key, value) => {
     await AsyncStorage.setItem(key, value);
-    await BluetoothManager.connect(value) // the device address scanned.
-    .then((s)=>{
-      console.log('Conectado à ' + value);
-      navigation.pop();
-    }),(e)=>{
-      console.log('Falhou Conexão')
-    }       
+    await BluetoothManager.connect(value)
+    .then((connected)=>{
+      if(connected) {
+        ToastAndroid.show(
+          'Conectado a Impressora',
+          ToastAndroid.LONG,
+          ToastAndroid.BOTTOM,
+        );
+        navigation.pop();
+      }
+    })
+    .catch((error)=>{
+      if(error){
+        ToastAndroid.show(
+          'Ops! Não encontrei a impressora',
+          ToastAndroid.LONG,
+          ToastAndroid.BOTTOM,
+        );
+      }
+    })       
   };
 
   return (
@@ -77,16 +89,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 10,
-    borderColor: '#C9C9C9',
-    borderWidth: 1,
-    borderRadius: 10,
+    // borderColor: '#C9C9C9',
+    // borderWidth: 1,
+    // borderRadius: 10,
   },
   deviceButton: {
-    padding: 10,
+    padding: 5,
   },
   deviceName: {
     fontFamily: 'RobotoCondensed-Bold',
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
   },
 });
