@@ -1,11 +1,15 @@
 import React, {useEffect, useState} from 'react';
-import { StyleSheet, Text, FlatList, SafeAreaView, TouchableOpacity, ToastAndroid } from 'react-native';
+import { StyleSheet, Text, FlatList, SafeAreaView, TouchableOpacity, ToastAndroid, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BluetoothManager } from 'react-native-bluetooth-escpos-printer';
 import { useNavigation } from '@react-navigation/native';
+import { View } from 'native-base';
+
+import colors from '../../assets/colors/colors';
 
 export default () => {
   const [deviceList, setDeviceList] = useState([]);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -36,6 +40,7 @@ export default () => {
 
   const setBluetoothDevice = async (key, value) => {
     await AsyncStorage.setItem(key, value);
+    setLoading(true);
     await BluetoothManager.connect(value)
     .then((connected)=>{
       if(connected) {
@@ -44,6 +49,7 @@ export default () => {
           ToastAndroid.LONG,
           ToastAndroid.BOTTOM,
         );
+        setLoading(false);
         navigation.pop();
       }
     })
@@ -60,7 +66,12 @@ export default () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <FlatList
+      { loading ? (
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
         data={deviceList}
         renderItem={({item}) => (
           <TouchableOpacity
@@ -76,12 +87,17 @@ export default () => {
         )}
         keyExtractor={(item, index) => index.toString()}
       />
+      )}
+      
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingTop: 30,
   },
   containerItem: {

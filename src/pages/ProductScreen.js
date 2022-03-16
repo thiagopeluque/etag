@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, StatusBar, SafeAreaView, View, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, StatusBar, SafeAreaView, View, Image, TouchableOpacity, ToastAndroid } from 'react-native';
 import { BluetoothEscposPrinter } from 'react-native-bluetooth-escpos-printer';
 import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRoute } from '@react-navigation/native';
 
 import colors from '../../assets/colors/colors';
@@ -10,24 +11,48 @@ export default () => {
   const route = useRoute();
   const produto = route.params.produto;
 
-  async function printLabel() {
-    await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
-    await BluetoothEscposPrinter.printText(produto.descricao.substring(0, 30)+"\n\r", {});
-    await BluetoothEscposPrinter.printText("Cod: " + produto.codigo + "   Un: " + produto.unid_medida + "\n\r", {});
-    await BluetoothEscposPrinter.printText("Fabricante: " + produto.fabricante + "\n\r", {});
-    await BluetoothEscposPrinter.printText("R$ "+ produto.preco_venda.toFixed(2),{
-      encoding:'GBK',
-      codepage:0,
-      widthtimes:1,
-      heigthtimes:1,
-      fonttype:0
-    });
-    // await BluetoothEscposPrinter.printText("--------------------------------\n\r", {});
+  async function printVerticalLabel() {
+    try {
+      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
+      await BluetoothEscposPrinter.setBlob(1);
+      await BluetoothEscposPrinter.printText(produto.descricao.substring(0, 30)+"\n\r", {});
+      await BluetoothEscposPrinter.setBlob(0);
+      await BluetoothEscposPrinter.printText("Cod: " + produto.codigo + "   Un: " + produto.unid_medida + "\n\r", {});
+      await BluetoothEscposPrinter.printText("Fabricante: " + produto.fabricante + "\n\r", {});
+      await BluetoothEscposPrinter.printText("R$ " + (produto.preco_venda.toFixed(2)) + "\n\r",{
+        encoding:'Windows-1252',
+        codepage:0,
+        widthtimes:1,
+        heigthtimes:1,
+        fonttype:2
+      });
+      await BluetoothEscposPrinter.printBarCode(produto.codigo_barras, BluetoothEscposPrinter.BARCODETYPE.JAN13, 3, 60, 0, 2);
+      await BluetoothEscposPrinter.printText("\r\n\r\n\r\n", {});
+      // await BluetoothEscposPrinter.printPic(logoBase64, {width: 200, left: 40});
+    } catch {
+      const value = await AsyncStorage.getItem('address');
+      if (value !== null) {
+        ToastAndroid.show(
+          'Estou conectado porém a impressora está desligada',
+          ToastAndroid.LONG,
+          ToastAndroid.BOTTOM,
+        );
+      } else {
+        ToastAndroid.show(
+          'Você ainda não se conectou com uma impressora',
+          ToastAndroid.LONG,
+          ToastAndroid.BOTTOM,
+        );
+      }
+    }
+    
   }
   
   return (
     <SafeAreaView style={styles.Container}>
+      
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      
       <View style={styles.ImageContainer}>
         <Image
           style={styles.ImageStretch}
@@ -37,6 +62,7 @@ export default () => {
           {produto.descricao.substring(0, 45)}
         </Text>
       </View>
+
       <View style={styles.InfoContainer}>
         <View style={styles.InfoContainerTitle}>
           <Text style={styles.ProductInfoTitle}> Código do Produto: </Text>
@@ -53,16 +79,11 @@ export default () => {
           <Text style={styles.ProductInfo}> {produto.fabricante} </Text>
           <Text style={styles.ProductInfo}> {produto.unid_medida} </Text>
           <Text style={styles.ProductInfo}>
-            R$ {produto.ultimo_preco.toFixed(2)}
+            {produto.ultimo_preco.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'})}
           </Text>
         </View>
       </View>
-      <View style={styles.PriceContainer}>
-        <Text style={styles.PriceTitle}> PREÇO ATUAL </Text>
-        <Text style={styles.PriceInfo}>
-          R$ {produto.preco_venda.toFixed(2)}
-        </Text>
-      </View>
+      
       <View style={styles.InfoContainer}>
         <View style={styles.InfoContainerTitle}>
           <Text style={styles.ProductInfoTitle}> Média de Venda: </Text>
@@ -83,6 +104,14 @@ export default () => {
           </Text>
         </View>
       </View>
+
+      <View style={styles.PriceContainer}>
+        <Text style={styles.PriceTitle}> PREÇO ATUAL </Text>
+        <Text style={styles.PriceInfo}>
+          {produto.preco_venda.toLocaleString('pt-br',{style: 'currency', currency: 'BRL'})}
+        </Text>
+      </View>
+      
       <View style={styles.PrintContainer}>
         <View style={styles.PrintContainerLogo}>
           <Image
@@ -92,13 +121,14 @@ export default () => {
         </View>
         <View style={styles.PrintContainerButton}>
           <TouchableOpacity style={styles.PrintButton} onPress={() => {
-            printLabel();
+            printVerticalLabel();
           }}>
             <Icon name="ios-print-outline" size={35} color={colors.textLight} />
             <Text style={styles.TextPrintButton}> Imprimir Etiqueta </Text>
           </TouchableOpacity>
         </View>
       </View>
+      
     </SafeAreaView>
   );
 };
@@ -109,40 +139,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   ImageContainer: {
-    margin: 5,
-    justifyContent: 'center',
+    flex: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
-    backgroundColor: '#FFF',
   },
   ImageStretch: {
-    width: 220,
-    height: 220,
+    width: 180,
+    height: 180,
     resizeMode: 'contain',
   },
   ProductTitle: {
-    marginTop: 5,
-    marginBottom: 10,
-    fontSize: 30,
-    width: '90%',
+    fontSize: 25,
+    width: '50%',
     color: colors.primary,
-    textAlign: 'center',
     fontFamily: 'RobotoCondensed-Bold',
   },
   InfoContainer: {
     flex: 1,
     flexDirection: 'row',
-    width: '100%',
-    height: '20%',
-  },
-  InfoContainerTitle: {
-    flex: 1,
-    width: 50,
-    // backgroundColor: '#C9C9C9'
-  },
-  InfoContainerInfo: {
-    flex: 1,
-    width: 50,
-    // backgroundColor: '#A8A8A8'
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   ProductInfoTitle: {
     fontSize: 16,
@@ -157,9 +174,8 @@ const styles = StyleSheet.create({
     fontFamily: 'RobotoCondensed-Regular',
   },
   PriceContainer: {
-    paddingBottom: 20,
-    paddingTop: 20,
-    width: '100%',
+    flex: 1,
+    justifyContent: 'space-evenly'
   },
   PriceTitle: {
     fontSize: 30,
@@ -170,7 +186,6 @@ const styles = StyleSheet.create({
   },
   PriceInfo: {
     fontSize: 50,
-    lineHeight: 55,
     textAlign: 'center',
     alignItems: 'center',
     fontFamily: 'RobotoCondensed-Bold',
@@ -179,22 +194,15 @@ const styles = StyleSheet.create({
   PrintContainer: {
     flex: 1,
     flexDirection: 'row',
-    width: '100%',
-    height: '20%',
   },
   PrintContainerLogo: {
-    flex: 1,
-    width: 40,
     alignItems: 'center',
-    justifyContent: 'center',
-    // backgroundColor: '#C9C9C9'
+    justifyContent: 'center'
   },
   PrintContainerButton: {
-    flex: 2,
-    width: 60,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    // backgroundColor: '#A8A8A8'
   },
   Logo: {
     width: 120,

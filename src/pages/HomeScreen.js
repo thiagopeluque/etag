@@ -1,18 +1,9 @@
-import React, {useState} from 'react';
-import {
-  StyleSheet,
-  Text,
-  StatusBar,
-  SafeAreaView,
-  View,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  Modal,
-  ToastAndroid,
-} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, StatusBar, SafeAreaView, View, TextInput, TouchableOpacity, Image, Modal, ToastAndroid } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { BluetoothManager } from 'react-native-bluetooth-escpos-printer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import colors from '../../assets/colors/colors';
 import Barcode from '../components/Barcode';
@@ -21,6 +12,39 @@ export default () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [inputData, setInputData] = useState('');
   const navigation = useNavigation();
+
+  const fetchPrinter = async () => {
+    try {
+      const value = await AsyncStorage.getItem('address');
+      if (value !== null) {
+        await BluetoothManager.connect(value)
+          .then((connected) => {
+            if (connected) {
+              ToastAndroid.show(
+                'Conectado a Impressora',
+                ToastAndroid.LONG,
+                ToastAndroid.BOTTOM,
+              );
+            }
+          })
+          .catch((error) => {
+            if (error) {
+              ToastAndroid.show(
+                'Ops! Não encontrei a impressora. Verifique se está ligada',
+                ToastAndroid.LONG,
+                ToastAndroid.BOTTOM,
+              );
+            }
+          })
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  useEffect(() => {
+    fetchPrinter();
+  }, [])
 
   const handleInputBarcode = (data) => {
     setInputData(data);
@@ -33,7 +57,7 @@ export default () => {
       .then((json) => {
         if (json.produtos[0]) {
           setModalVisible(false);
-          navigation.navigate('Produto', {produto: json.produtos[0]});
+          navigation.navigate('Produto', { produto: json.produtos[0] });
           BarcodeInput.clear();
         } else {
           ToastAndroid.show(
@@ -100,9 +124,7 @@ export default () => {
             Abrir o Leitor de Código de Barras
           </Text>
         </TouchableOpacity>
-      </SafeAreaView>
 
-      <SafeAreaView style={styles.HeaderBluetooth}>
         <TouchableOpacity
           style={styles.BluetoothButton}
           onPress={() => {
@@ -113,7 +135,9 @@ export default () => {
             Conectar Impressora Bluetooth
           </Text>
         </TouchableOpacity>
+
       </SafeAreaView>
+
     </SafeAreaView>
   );
 };
